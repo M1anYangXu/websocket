@@ -20,7 +20,7 @@ public class WebSocket {
     private static AtomicInteger onlineNum = new AtomicInteger();
 
 
-    //concurrent包的线程安全Set，用来存放每个客户端对应的WebSocketServer对象。
+    // concurrent包的线程安全Set，用来存放每个客户端对应的WebSocketServer对象。
     private static ConcurrentHashMap<String, Session> sessionPools = new ConcurrentHashMap<>();
 
     // 群发消息
@@ -38,7 +38,6 @@ public class WebSocket {
     // 发送消息
     public void sendMessage(Session session,String message) throws IOException {
         System.out.println("发送消息后的sessionPools");
-        System.out.println(sessionPools);
         if(session != null){
             // 线程加锁 防止多线程阻塞和冲突
             synchronized (session) {
