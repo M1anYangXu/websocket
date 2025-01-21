@@ -1,10 +1,7 @@
 package web.controller;
 
 import com.alibaba.fastjson.JSON;
-import jakarta.websocket.OnClose;
-import jakarta.websocket.OnError;
-import jakarta.websocket.OnOpen;
-import jakarta.websocket.Session;
+import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import org.springframework.stereotype.Component;
@@ -28,6 +25,7 @@ public class WebSocket {
 
     // 群发消息
     public void broadcast(String message){
+        System.out.println("广播的消息message"+message);
         for (Session session: sessionPools.values()) {
             try {
                 sendMessage(session, message);
@@ -39,12 +37,11 @@ public class WebSocket {
     
     // 发送消息
     public void sendMessage(Session session,String message) throws IOException {
-        System.out.println("发送消息后");
+        System.out.println("发送消息后的sessionPools");
         System.out.println(sessionPools);
         if(session != null){
             // 线程加锁 防止多线程阻塞和冲突
             synchronized (session) {
-                System.out.println("发送数据："+message);
                 session.getBasicRemote().sendText(message);
             }
         }
@@ -62,8 +59,6 @@ public class WebSocket {
     //建立连接成功调用
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "username") String userName){
-        System.out.println("建立连接后");
-        System.out.println(sessionPools);
         sessionPools.put(userName, session);
         addOnlineCount();
         System.out.println(userName + "加入webSocket！当前人数为" + onlineNum);
@@ -88,6 +83,20 @@ public class WebSocket {
         msg.setContent(userName);
         broadcast(JSON.toJSONString(msg,true));
     }
+
+    //收到客户端信息后，根据接收人的username把消息推下去或者群发
+    // to=-1群发消息
+    @OnMessage
+    public void onMessage(String message) throws IOException{
+        System.out.println("服务器获得websocket的消息" + message);
+        Message msg=JSON.parseObject(message, Message.class);
+        msg.setDate(new Date());
+        if (msg.getTo().equals("-1")) {
+            broadcast(JSON.toJSONString(msg,true));
+        } else {
+            sendInfo(msg.getTo(), JSON.toJSONString(msg,true));
+        }
+    }
     
     //错误时调用
     @OnError
@@ -97,18 +106,22 @@ public class WebSocket {
     }
 
 
+    // 增加人数
     public static void addOnlineCount(){
         onlineNum.incrementAndGet();
     }
 
+    // 减少人数
     public static void subOnlineCount() {
         onlineNum.decrementAndGet();
     }
 
+    // 获取在线人数
     public static AtomicInteger getOnlineNumber() {
         return onlineNum;
     }
     
+    // 获取session
     public static ConcurrentHashMap<String, Session> getSessionPools() {
         return sessionPools;
     }
